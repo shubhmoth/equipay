@@ -14,7 +14,7 @@ class Settings(BaseSettings, APIConfig, AuthConfig, CORSConfig, DatabaseConfig):
     """
     ENVIRONMENT: str = "development"
     DEBUG: bool = False
-    DATABASE_URL: str
+    DATABASE_URL: str = None
     VERSION: str = "0.1.0"
     
     class Config:

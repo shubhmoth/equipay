@@ -346,7 +346,7 @@
       "type": "UUID",
       "nullable": false,
       "primary_key": true,
-      "default": "CallableColumnDefault(<function uuid4 at 0x109a85160>)"
+      "default": "CallableColumnDefault(<function uuid4 at 0x108a6b700>)"
     },
     "user_id": {
       "type": "BIGINT",
