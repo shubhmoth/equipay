@@ -1,0 +1,462 @@
+{
+  "users": {
+    "name": {
+      "type": "VARCHAR(255)",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "username": {
+      "type": "VARCHAR(50)",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "email": {
+      "type": "VARCHAR(255)",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "is_social_account": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(False)"
+    },
+    "mobile_number": {
+      "type": "VARCHAR(20)",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "password": {
+      "type": "VARCHAR(255)",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "is_password_random": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(False)"
+    },
+    "is_user_dummy": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(False)"
+    },
+    "auth_provider": {
+      "type": "VARCHAR(50)",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "max_session": {
+      "type": "SMALLINT",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(1)"
+    },
+    "last_login": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "is_active": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(True)"
+    },
+    "created_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "last_updated_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    }
+  },
+  "social_auth": {
+    "user_id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "provider": {
+      "type": "VARCHAR(50)",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "provider_user_id": {
+      "type": "VARCHAR(255)",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "email": {
+      "type": "VARCHAR(255)",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "name": {
+      "type": "VARCHAR(255)",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "profile_picture": {
+      "type": "TEXT",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "is_active": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(True)"
+    },
+    "created_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "last_updated_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    }
+  },
+  "transactions": {
+    "payer_id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "payee_id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "transaction_amount": {
+      "type": "NUMERIC(12, 2)",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "description": {
+      "type": "TEXT",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "is_settled": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(False)"
+    },
+    "is_group_transaction": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(False)"
+    },
+    "id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "is_active": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(True)"
+    },
+    "created_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "last_updated_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    }
+  },
+  "group_members": {
+    "group_id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "user_id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "created_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "is_active": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(True)"
+    },
+    "id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "last_updated_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    }
+  },
+  "groups": {
+    "admin_id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "group_name": {
+      "type": "VARCHAR(255)",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "is_active": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(True)"
+    },
+    "created_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "last_updated_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    }
+  },
+  "transaction_summary": {
+    "user_id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "total_borrowings": {
+      "type": "NUMERIC(12, 2)",
+      "nullable": false,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(0.0)"
+    },
+    "total_receivables": {
+      "type": "NUMERIC(12, 2)",
+      "nullable": false,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(0.0)"
+    },
+    "total_amount": {
+      "type": "NUMERIC(12, 2)",
+      "nullable": false,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(0.0)"
+    },
+    "id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "is_active": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(True)"
+    },
+    "created_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "last_updated_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    }
+  },
+  "user_sessions": {
+    "session_id": {
+      "type": "UUID",
+      "nullable": false,
+      "primary_key": true,
+      "default": "CallableColumnDefault(<function uuid4 at 0x109a85160>)"
+    },
+    "user_id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "access_token": {
+      "type": "TEXT",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "refresh_token": {
+      "type": "TEXT",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "user_agent": {
+      "type": "TEXT",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "ip_address": {
+      "type": "VARCHAR",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "device_info": {
+      "type": "TEXT",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "expires_at": {
+      "type": "DATETIME",
+      "nullable": false,
+      "primary_key": false,
+      "default": null
+    },
+    "last_activity": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "is_active": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(True)"
+    },
+    "created_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "last_updated_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    }
+  },
+  "user_connections": {
+    "user_id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "connected_user_id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "id": {
+      "type": "BIGINT",
+      "nullable": false,
+      "primary_key": true,
+      "default": null
+    },
+    "is_active": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(True)"
+    },
+    "created_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
+    "last_updated_at": {
+      "type": "DATETIME",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    }
+  }
+}
