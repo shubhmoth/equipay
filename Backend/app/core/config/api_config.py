@@ -1,15 +1,19 @@
 # app/core/config/api_config.py
-from typing import Dict, Any
 
-class APIConfig:
+from typing import Dict, Any
+from pydantic_settings import BaseSettings
+
+class APIConfig(BaseSettings):
+    """API configuration settings"""
     PROJECT_NAME: str = "Equipay"
     VERSION: str = "1.0.0"
     DESCRIPTION: str = "Split bills and expenses with friends and family"
     API_V1_STR: str = "/api"
     RATE_LIMIT_PER_MINUTE: int = 60
-
+    
     @property
     def get_api_config(self) -> Dict[str, Any]:
+        """Get FastAPI application configuration"""
         config = {
             "title": self.PROJECT_NAME,
             "description": self.DESCRIPTION,

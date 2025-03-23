@@ -6,6 +6,12 @@
       "primary_key": false,
       "default": null
     },
+    "other_name": {
+      "type": "VARCHAR(255)",
+      "nullable": true,
+      "primary_key": false,
+      "default": null
+    },
     "username": {
       "type": "VARCHAR(50)",
       "nullable": false,
@@ -346,7 +352,7 @@
       "type": "UUID",
       "nullable": false,
       "primary_key": true,
-      "default": "CallableColumnDefault(<function uuid4 at 0x108a6b700>)"
+      "default": "CallableColumnDefault(<function uuid4 at 0x1037c3ca0>)"
     },
     "user_id": {
       "type": "BIGINT",

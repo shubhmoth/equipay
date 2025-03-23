@@ -25,6 +25,9 @@ class SchemaSynchronizer:
         self.settings = settings
         self.inspector = inspect(engine)
         
+        # Get columns to skip from settings
+        self.columns_to_skip = settings.DB_SKIP_COLUMNS_ON_MODIFY
+        
         self.type_map = {
             'String': 'character varying',
             'Integer': 'integer',
@@ -185,6 +188,11 @@ class SchemaSynchronizer:
 
         modified_columns = []
         for col_name in set(model_columns.keys()).intersection(set(db_columns.keys())):
+            # Skip columns that should not be checked for modifications
+            if col_name in self.columns_to_skip:
+                logger.debug(f"Skipping column modification check for '{col_name}' in table '{table_name}'")
+                continue
+                
             model_col = model_columns[col_name]
             db_col = db_columns[col_name]
             
@@ -207,8 +215,15 @@ class SchemaSynchronizer:
         if missing_columns:
             self._add_columns(table_name, {name: model_columns[name] for name in missing_columns})
         
-        if extra_columns:
-            self._drop_columns(table_name, extra_columns)
+        if extra_columns and self.settings.DB_STRICT_MODE:
+            # Don't drop columns that are in the skip list
+            extra_columns_to_drop = set(extra_columns) - set(self.columns_to_skip)
+            if extra_columns_to_drop:
+                self._drop_columns(table_name, extra_columns_to_drop)
+            
+            skipped_extra_columns = set(extra_columns).intersection(set(self.columns_to_skip))
+            if skipped_extra_columns:
+                logger.info(f"Skipped dropping columns in {table_name}: {skipped_extra_columns}")
 
         if modified_columns:
             self._modify_columns(table_name, modified_columns)
@@ -244,6 +259,11 @@ class SchemaSynchronizer:
             columns: Set of column names to drop
         """
         for col_name in columns:
+            # Double-check to ensure we don't drop columns in the skip list
+            if col_name in self.columns_to_skip:
+                logger.info(f"Skipping drop of column {col_name} from table {table_name} (in skip list)")
+                continue
+                
             try:
                 with self.engine.begin() as conn:
                     stmt = text(f"ALTER TABLE {table_name} DROP COLUMN {col_name}")
@@ -262,6 +282,12 @@ class SchemaSynchronizer:
             columns: List of tuples (column_name, model_column, db_column)
         """
         for col_name, model_col, db_col in columns:
+            # Skip columns that should not be modified (already filtered in _synchronize_table_columns, 
+            # but double-checking here for safety)
+            if col_name in self.columns_to_skip:
+                logger.info(f"Skipping modification of column {col_name} in table {table_name} (in skip list)")
+                continue
+                
             try:
                 with self.engine.begin() as conn:
                     column_type = self._get_column_type_definition(model_col)
@@ -329,3 +355,13 @@ class SchemaSynchronizer:
         
         logger.warning(f"Unknown column type: {col_type}, using TEXT as fallback")
         return "TEXT"
+        
+    def set_skip_columns(self, columns):
+        """
+        Set the list of columns to skip during modification checks
+        
+        Args:
+            columns: List of column names to skip
+        """
+        self.columns_to_skip = columns
+        logger.info(f"Set skip columns for modification: {columns}")

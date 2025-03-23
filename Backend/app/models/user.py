@@ -8,7 +8,7 @@ class User(Base, BaseModel):
     __tablename__ = "users"
     
     name = Column(String(255), nullable=False)
-    #other_name = Column(String(255), nullable=True)
+    other_name = Column(String(255), nullable=True)
     username = Column(String(50), unique=True, nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     is_social_account = Column(Boolean, default=False)

@@ -1,58 +1,78 @@
 # app/core/config/settings.py
 
-from pydantic_settings import BaseSettings
+import os
 from functools import lru_cache
+from typing import Dict, Any
+
+from .env_config import EnvironmentConfig
 from .api_config import APIConfig
 from .auth_config import AuthConfig
 from .cors_config import CORSConfig
 from .database_config import DatabaseConfig
 
-class Settings(BaseSettings, APIConfig, AuthConfig, CORSConfig, DatabaseConfig):
-    """
-    Application settings class that combines all config components.
-    Inherits database settings from DatabaseConfig.
-    """
-    ENVIRONMENT: str = "development"
-    DEBUG: bool = False
-    DATABASE_URL: str = None
-    VERSION: str = "0.1.0"
-    
+
+class Settings(
+    EnvironmentConfig,
+    APIConfig,
+    AuthConfig,
+    CORSConfig, 
+    DatabaseConfig
+):  
     class Config:
-        env_file = ".env"
         case_sensitive = True
-
-    @property
-    def is_development(self) -> bool:
-        if not isinstance(self.ENVIRONMENT, str) or not self.ENVIRONMENT.strip():
-            raise ValueError("Environment must be a non-empty string.")
-        return self.ENVIRONMENT.lower() == "development"
-
-    @property
-    def is_production(self) -> bool:
-        if not isinstance(self.ENVIRONMENT, str) or not self.ENVIRONMENT.strip():
-            raise ValueError("Environment must be a non-empty string.")
-        return self.ENVIRONMENT.lower() == "production"
-    
-    def get_postgres_url(self) -> str:
-        return self.get_database_url(
-            self.POSTGRES_SERVER,
-            self.POSTGRES_PORT,
-            self.POSTGRES_USER,
-            self.POSTGRES_PASSWORD,
-            self.POSTGRES_DB
-        )
+        env_nested_delimiter = "__"
+        
+    @classmethod
+    def get_environment_specific_settings(cls) -> 'Settings':
+        """
+        Factory method to create settings based on the current environment.
+        Override settings for different environments here.
+        """
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        
+        # Create base settings
+        settings = cls()
+        
+        # Apply environment-specific overrides
+        if env == "development":
+            settings.DEBUG = True
+            # Development-specific overrides
+            
+        elif env == "staging":
+            settings.DEBUG = False
+            settings.DB_POOL_SIZE = 30
+            settings.DB_MAX_OVERFLOW = 10
+            # Staging-specific overrides
+            
+        elif env == "production":
+            settings.DEBUG = False
+            settings.RATE_LIMIT_PER_MINUTE = 120
+            settings.DB_POOL_SIZE = 50
+            settings.DB_MAX_OVERFLOW = 20
+            settings.DB_POOL_RECYCLE = 3600
+            # Production-specific overrides
+            
+        elif env == "testing":
+            settings.DEBUG = True
+            settings.DB_CREATE_TABLES = True
+            settings.DB_AUTO_MIGRATE = False
+            # Testing-specific overrides
+            
+        return settings
 
 
 @lru_cache()
 def get_settings() -> Settings:
-    """Get cached settings instance"""
+    """
+    Get cached settings instance based on the current environment.
     
+    Returns:
+        Singleton Settings instance for the application
+    """
     try:
         # Clear the cache to ensure we get fresh settings
         get_settings.cache_clear()
-        settings = Settings()
-        if not isinstance(settings, Settings):
-            raise TypeError("Failed to create a valid Settings instance.")
+        settings = Settings.get_environment_specific_settings()
         return settings
     except Exception as e:
-        raise RuntimeError(f"An error occurred while initializing the settings: {e}")
+        raise RuntimeError(f"Failed to initialize application settings: {e}")
