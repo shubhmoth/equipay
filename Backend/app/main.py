@@ -2,23 +2,23 @@
 import sys
 import logging
 import traceback
-import importlib
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.responses import HTMLResponse
-from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.db.database import engine, async_engine, SessionLocal, get_db
+from app.db.database import engine, async_engine
 from app.core.config.settings import get_settings
 from app.core.utils.function_execution import safe_execute
 from app.startup import startup_event, shutdown_event
 from app.db.initializer import (
     check_database_connection
 )
+from app.middleware.config import setup_middlewares
 
-#from app.api.v1.api import api_router
+from app.api.v1.api import api_router
 
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -28,21 +28,17 @@ logger = logging.getLogger(__name__)
 
 settings = safe_execute(get_settings, "Error loading settings")
 
+# Initialize application
 app = safe_execute(
     lambda: FastAPI(**settings.get_api_config),
     "Error initializing FastAPI app"
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.get_cors_origins,
-    allow_credentials=True,
-    allow_methods=settings.get_cors_methods,
-    allow_headers=settings.get_cors_headers,
-)
+# Setup all middlewares
+setup_middlewares(app)
 
 # Add API router
-#app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(api_router)
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
