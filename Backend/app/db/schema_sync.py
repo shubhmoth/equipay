@@ -1,4 +1,3 @@
-# app/db/schema_sync.py
 import logging
 import traceback
 from sqlalchemy import inspect, text, MetaData, Table, Column
@@ -77,6 +76,14 @@ class SchemaSynchronizer:
         
         db_type = str(db_col['type']).lower()
 
+        # Handle autoincrement columns specially
+        if getattr(model_col, 'autoincrement', False) and model_col.primary_key:
+            # Check if db column is serial/bigserial or integer/bigint with sequence
+            if 'integer' in db_type and 'serial' in db_type:
+                return True
+            if 'bigint' in db_type and ('bigserial' in db_type or self._has_sequence(model_col.table.name, model_col.name)):
+                return True
+
         if 'character varying' in model_type.lower():
             import re
             model_length = re.search(r'\((\d+)\)', model_type)
@@ -96,7 +103,33 @@ class SchemaSynchronizer:
         model_type = model_type.lower().split('(')[0].strip()
         db_type = db_type.lower().split('(')[0].strip()
         
+        # Additional check for integer/bigint vs serial/bigserial
+        if (model_type == 'integer' and db_type == 'serial') or (model_type == 'bigint' and db_type == 'bigserial'):
+            return True
+        
         return model_type == db_type
+    
+    def _has_sequence(self, table_name, column_name):
+        """
+        Check if a column has an associated sequence for autoincrement
+        
+        Args:
+            table_name: Name of the table
+            column_name: Name of the column
+            
+        Returns:
+            bool: True if a sequence exists for this column
+        """
+        sequence_name = f"{table_name}_{column_name}_seq"
+        try:
+            with self.engine.connect() as conn:
+                result = conn.execute(text(
+                    f"SELECT EXISTS (SELECT 1 FROM pg_sequences WHERE sequencename = '{sequence_name}')"
+                )).scalar()
+                return result
+        except Exception as e:
+            logger.error(f"Error checking for sequence {sequence_name}: {e}")
+            return False
     
     def synchronize_schema(self):
         """Synchronize database schema with models"""
@@ -128,17 +161,81 @@ class SchemaSynchronizer:
         """Create tables that exist in models but not in the database"""
         from app.models import Base
         
-        metadata = MetaData()
-        for table_name in missing_tables:
-            model = next((m for m in self.models if m.__tablename__ == table_name), None)
-            if model:
-                Table(table_name, metadata, *[c.copy() for c in model.__table__.columns])
-        
+        # First attempt with standard SQLAlchemy approach
         try:
+            metadata = MetaData()
+            tables_to_create = []
+            
+            for table_name in missing_tables:
+                model = next((m for m in self.models if m.__tablename__ == table_name), None)
+                if model:
+                    tables_to_create.append(model.__tablename__)
+                    Table(table_name, metadata, *[c.copy() for c in model.__table__.columns])
+            
             metadata.create_all(self.engine)
-            logger.info(f"Successfully created tables: {missing_tables}")
+            logger.info(f"Successfully created tables: {tables_to_create}")
         except Exception as e:
-            logger.error(f"Error creating tables: {e}")
+            logger.error(f"Error creating tables with SQLAlchemy: {e}")
+            logger.error(traceback.format_exc())
+            
+            # If standard approach fails, try to create tables using raw SQL
+            # This is especially important for autoincrement columns with asyncpg
+            for table_name in missing_tables:
+                self._create_table_with_raw_sql(table_name)
+    
+    def _create_table_with_raw_sql(self, table_name):
+        """Create a table using raw SQL statements"""
+        model = next((m for m in self.models if m.__tablename__ == table_name), None)
+        if not model:
+            return
+            
+        try:
+            columns = []
+            primary_keys = []
+            autoincrement_columns = []
+            
+            for column in model.__table__.columns:
+                col_name = column.name
+                col_type = self._get_column_type_definition(column, skip_serial=True)
+                nullable = "NULL" if column.nullable else "NOT NULL"
+                
+                # Handle default for non-autoincrement columns
+                default = ""
+                if column.default is not None and not (getattr(column, 'autoincrement', False) and column.primary_key):
+                    if column.default.is_scalar:
+                        default_val = column.default.arg
+                        if isinstance(default_val, bool):
+                            default_val = str(default_val).lower()
+                        elif isinstance(default_val, str):
+                            default_val = f"'{default_val}'"
+                        default = f"DEFAULT {default_val}"
+                
+                columns.append(f"{col_name} {col_type} {nullable} {default}")
+                
+                if column.primary_key:
+                    primary_keys.append(col_name)
+                
+                if getattr(column, 'autoincrement', False) and column.primary_key:
+                    autoincrement_columns.append(col_name)
+            
+            # Add primary key constraint
+            if primary_keys:
+                columns.append(f"PRIMARY KEY ({', '.join(primary_keys)})")
+            
+            # Create table
+            with self.engine.begin() as conn:
+                create_table_sql = f"CREATE TABLE {table_name} ({', '.join(columns)})"
+                conn.execute(text(create_table_sql))
+                
+                # Set up sequences for autoincrement columns
+                for col_name in autoincrement_columns:
+                    sequence_name = f"{table_name}_{col_name}_seq"
+                    conn.execute(text(f"CREATE SEQUENCE IF NOT EXISTS {sequence_name}"))
+                    conn.execute(text(f"ALTER TABLE {table_name} ALTER COLUMN {col_name} SET DEFAULT nextval('{sequence_name}')"))
+            
+            logger.info(f"Successfully created table {table_name} with raw SQL")
+        except Exception as e:
+            logger.error(f"Error creating table {table_name} with raw SQL: {e}")
             logger.error(traceback.format_exc())
     
     def _drop_extra_tables(self, extra_tables):
@@ -240,15 +337,48 @@ class SchemaSynchronizer:
             try:
                 with self.engine.begin() as conn:
                     column_type = self._get_column_type_definition(column)
-                    nullable = "NULL" if column.nullable else "NOT NULL"
-                    default = f"DEFAULT {column.default.arg}" if column.default is not None and column.default.arg is not None else ""
                     
-                    stmt = text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {column_type} {nullable} {default}")
-                    conn.execute(stmt)
+                    # Handle autoincrement
+                    if getattr(column, 'autoincrement', False) and column.primary_key:
+                        if 'SERIAL' in column_type or 'BIGSERIAL' in column_type:
+                            # Convert SERIAL to explicit INTEGER + sequence for better control
+                            base_type = "INTEGER" if "SERIAL" in column_type and "BIG" not in column_type else "BIGINT"
+                            stmt = text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {base_type} NOT NULL")
+                        else:
+                            # Otherwise, add column first then add sequence
+                            nullable = "NULL" if column.nullable else "NOT NULL"
+                            stmt = text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {column_type} {nullable}")
+                        
+                        conn.execute(stmt)
+                        
+                        # Create sequence and set default - simple approach
+                        sequence_name = f"{table_name}_{col_name}_seq"
+                        stmt = text(f"CREATE SEQUENCE IF NOT EXISTS {sequence_name}")
+                        conn.execute(stmt)
+                        
+                        stmt = text(f"ALTER TABLE {table_name} ALTER COLUMN {col_name} SET DEFAULT nextval('{sequence_name}')")
+                        conn.execute(stmt)
+                        
+                        # Add primary key if needed
+                        if column.primary_key:
+                            stmt = text(f"ALTER TABLE {table_name} ADD PRIMARY KEY ({col_name})")
+                            try:
+                                conn.execute(stmt)
+                            except Exception as e:
+                                logger.warning(f"Could not add primary key constraint to {col_name}: {e}")
+                        
+                        logger.info(f"Added autoincrement column {col_name} to table {table_name}")
+                    else:
+                        nullable = "NULL" if column.nullable else "NOT NULL"
+                        default = f"DEFAULT {column.default.arg}" if column.default is not None and column.default.arg is not None else ""
+                        
+                        stmt = text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {column_type} {nullable} {default}")
+                        conn.execute(stmt)
                 
                 logger.info(f"Added column {col_name} to table {table_name}")
             except Exception as e:
                 logger.error(f"Error adding column {col_name} to table {table_name}: {e}")
+                logger.error(traceback.format_exc())
     
     def _drop_columns(self, table_name, columns):
         """
@@ -266,8 +396,17 @@ class SchemaSynchronizer:
                 
             try:
                 with self.engine.begin() as conn:
-                    stmt = text(f"ALTER TABLE {table_name} DROP COLUMN {col_name}")
+                    # Check if the column has a sequence
+                    sequence_name = f"{table_name}_{col_name}_seq"
+                    has_sequence = self._has_sequence(table_name, col_name)
+                    
+                    stmt = text(f"ALTER TABLE {table_name} DROP COLUMN {col_name} CASCADE")
                     conn.execute(stmt)
+                    
+                    # Drop the sequence if it exists
+                    if has_sequence:
+                        stmt = text(f"DROP SEQUENCE IF EXISTS {sequence_name}")
+                        conn.execute(stmt)
                 
                 logger.info(f"Dropped column {col_name} from table {table_name}")
             except Exception as e:
@@ -287,20 +426,28 @@ class SchemaSynchronizer:
             if col_name in self.columns_to_skip:
                 logger.info(f"Skipping modification of column {col_name} in table {table_name} (in skip list)")
                 continue
+            
+            # Special handling for autoincrement columns
+            if getattr(model_col, 'autoincrement', False) and model_col.primary_key:
+                self._modify_autoincrement_column(table_name, col_name, model_col, db_col)
+                continue
                 
             try:
                 with self.engine.begin() as conn:
                     column_type = self._get_column_type_definition(model_col)
                     
+                    # First drop not null constraint if exists
                     stmt = text(f"ALTER TABLE {table_name} ALTER COLUMN {col_name} DROP NOT NULL")
                     try:
                         conn.execute(stmt)
                     except Exception:
                         pass
                     
+                    # Modify type
                     stmt = text(f"ALTER TABLE {table_name} ALTER COLUMN {col_name} TYPE {column_type} USING {col_name}::{column_type}")
                     conn.execute(stmt)
                     
+                    # Add not null constraint if needed
                     if not model_col.nullable:
                         stmt = text(f"ALTER TABLE {table_name} ALTER COLUMN {col_name} SET NOT NULL")
                         conn.execute(stmt)
@@ -310,16 +457,122 @@ class SchemaSynchronizer:
                 logger.error(f"Error modifying column {col_name} in table {table_name}: {e}")
                 logger.error(traceback.format_exc())
     
-    def _get_column_type_definition(self, column):
+    def _modify_autoincrement_column(self, table_name, col_name, model_col, db_col):
+        """
+        Special handling for modifying autoincrement columns
+        
+        Args:
+            table_name: Name of the table
+            col_name: Name of the column
+            model_col: SQLAlchemy Column object from model
+            db_col: Dictionary representing database column
+        """
+        try:
+            with self.engine.begin() as conn:
+                sequence_name = f"{table_name}_{col_name}_seq"
+                has_sequence = self._has_sequence(table_name, col_name)
+                
+                # Drop the existing sequence if it exists but is not working correctly
+                if has_sequence:
+                    # Check if sequence is properly linked to the column
+                    result = conn.execute(text(f"""
+                        SELECT pg_get_serial_sequence('{table_name}', '{col_name}') IS NOT NULL
+                    """)).scalar()
+                    
+                    if not result:
+                        # Sequence exists but isn't correctly linked - recreate it
+                        stmt = text(f"""
+                            ALTER TABLE {table_name} ALTER COLUMN {col_name} DROP DEFAULT;
+                            DROP SEQUENCE IF EXISTS {sequence_name};
+                        """)
+                        conn.execute(stmt)
+                        has_sequence = False
+                
+                # Check if we need to transform a regular column to an autoincrement one
+                if not has_sequence and not 'serial' in str(db_col['type']).lower():
+                    # Create sequence
+                    stmt = text(f"CREATE SEQUENCE IF NOT EXISTS {sequence_name}")
+                    conn.execute(stmt)
+                    
+                    # Set ownership and default
+                    stmt = text(f"""
+                        ALTER SEQUENCE {sequence_name} OWNED BY {table_name}.{col_name};
+                        ALTER TABLE {table_name} ALTER COLUMN {col_name} SET DEFAULT nextval('{sequence_name}'::regclass);
+                    """)
+                    conn.execute(stmt)
+                    
+                    # Update existing values if needed
+                    stmt = text(f"""
+                        DO $
+                        BEGIN
+                            IF EXISTS (SELECT 1 FROM {table_name} WHERE {col_name} IS NULL OR {col_name} = 0) THEN
+                                UPDATE {table_name} SET {col_name} = nextval('{sequence_name}') 
+                                WHERE {col_name} IS NULL OR {col_name} = 0;
+                            END IF;
+                        END $;
+                    """)
+                    conn.execute(stmt)
+                
+                # Ensure the column is NOT NULL
+                stmt = text(f"ALTER TABLE {table_name} ALTER COLUMN {col_name} SET NOT NULL")
+                try:
+                    conn.execute(stmt)
+                except Exception as e:
+                    logger.warning(f"Column already has NOT NULL constraint: {e}")
+                
+                # Ensure the column is the right type
+                column_type = self._get_column_type_definition(model_col, skip_serial=True)
+                stmt = text(f"ALTER TABLE {table_name} ALTER COLUMN {col_name} TYPE {column_type} USING {col_name}::{column_type}")
+                try:
+                    conn.execute(stmt)
+                except Exception as e:
+                    logger.warning(f"Could not modify column type, may already be correct: {e}")
+                
+                # Ensure primary key constraint
+                if model_col.primary_key:
+                    # Check if primary key already exists
+                    result = conn.execute(text(f"""
+                        SELECT count(*) FROM pg_constraint 
+                        WHERE conrelid = '{table_name}'::regclass 
+                        AND contype = 'p'
+                        AND conkey @> array[
+                            (SELECT attnum FROM pg_attribute 
+                             WHERE attrelid = '{table_name}'::regclass 
+                             AND attname = '{col_name}')
+                        ]::smallint[]
+                    """)).scalar()
+                    
+                    if not result:
+                        stmt = text(f"ALTER TABLE {table_name} ADD PRIMARY KEY ({col_name})")
+                        try:
+                            conn.execute(stmt)
+                        except Exception as e:
+                            logger.warning(f"Could not add primary key constraint to {col_name}: {e}")
+            
+            logger.info(f"Modified autoincrement column {col_name} in table {table_name}")
+        except Exception as e:
+            logger.error(f"Error modifying autoincrement column {col_name} in table {table_name}: {e}")
+            logger.error(traceback.format_exc())
+    
+    def _get_column_type_definition(self, column, skip_serial=False):
         """
         Get PostgreSQL type definition for a SQLAlchemy column
         
         Args:
             column: SQLAlchemy Column object
+            skip_serial: If True, don't convert to SERIAL types
             
         Returns:
             str: PostgreSQL type definition
         """
+        # Handle autoincrement columns
+        if not skip_serial and getattr(column, 'autoincrement', False) and column.primary_key:
+            col_type = str(column.type).upper()
+            if 'INTEGER' in col_type:
+                return "SERIAL"
+            elif 'BIGINT' in col_type:
+                return "BIGSERIAL"
+        
         col_type = str(column.type).upper()
         
         if 'VARCHAR' in col_type:

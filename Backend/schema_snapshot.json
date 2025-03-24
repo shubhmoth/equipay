@@ -54,6 +54,24 @@
       "primary_key": false,
       "default": "ScalarElementColumnDefault(False)"
     },
+    "is_user_verified": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(False)"
+    },
+    "is_mobile_verified": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(False)"
+    },
+    "is_private_user": {
+      "type": "BOOLEAN",
+      "nullable": true,
+      "primary_key": false,
+      "default": "ScalarElementColumnDefault(False)"
+    },
     "auth_provider": {
       "type": "VARCHAR(50)",
       "nullable": true,
@@ -352,7 +370,7 @@
       "type": "UUID",
       "nullable": false,
       "primary_key": true,
-      "default": "CallableColumnDefault(<function uuid4 at 0x1037c3ca0>)"
+      "default": "CallableColumnDefault(<function uuid4 at 0x103e25b80>)"
     },
     "user_id": {
       "type": "BIGINT",
