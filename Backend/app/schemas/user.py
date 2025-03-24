@@ -1,4 +1,4 @@
-# app/schemas/user.py
+#app/schemas/user.py
 from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, validator
@@ -14,6 +14,9 @@ class UserBase(BaseModel):
     mobile_number: str
     is_password_random: bool = False
     is_user_dummy: bool = False
+    is_user_verified: bool = False
+    is_mobile_verified: bool = False
+    is_private_user: bool = False
     auth_provider: Optional[str] = None
     is_active: bool = True
     max_session: int = 1
@@ -56,6 +59,9 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     other_name: Optional[str] = None
     mobile_number: Optional[str] = None
+    is_user_verified: Optional[bool] = None  
+    is_mobile_verified: Optional[bool] = None
+    is_private_user: Optional[bool] = None
     auth_provider: Optional[str] = None
     is_active: Optional[bool] = None
     max_session: Optional[int] = None

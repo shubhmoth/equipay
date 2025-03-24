@@ -1,4 +1,4 @@
-# app/models/user.py
+#app/models/user.py
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, BigInteger, SmallInteger
 from sqlalchemy.orm import relationship
 from app.db.database import Base
@@ -16,6 +16,9 @@ class User(Base, BaseModel):
     password = Column(String(255), nullable=False)
     is_password_random = Column(Boolean, default=False)
     is_user_dummy = Column(Boolean, default=False)
+    is_user_verified = Column(Boolean, nullable=False, default=False)
+    is_mobile_verified = Column(Boolean, nullable=False, default=False)
+    is_private_user = Column(Boolean, default=False)
     auth_provider = Column(String(50), nullable=True, index=True)
     max_session = Column(SmallInteger, default=1)
     last_login = Column(DateTime(timezone=True), nullable=True)
