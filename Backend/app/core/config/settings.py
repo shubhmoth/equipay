@@ -46,7 +46,7 @@ class Settings(
             
         elif env == "production":
             settings.DEBUG = False
-            settings.RATE_LIMIT_PER_MINUTE = 120
+            settings.RATE_LIMIT_PER_MINUTE = 12
             settings.DB_POOL_SIZE = 50
             settings.DB_MAX_OVERFLOW = 20
             settings.DB_POOL_RECYCLE = 3600
