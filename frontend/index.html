@@ -1,0 +1,80 @@
+i<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Equipay - Smart Finance Management</title>
+    
+    <!-- Dynamic Favicon Script -->
+    <script>
+      // Array of finance-related emojis
+      const financeIcons = ['💰', '💵', '💸', '💳', '🏦', '📈', '💎', '🪙', '💲', '🤑'];
+      
+      // Select a random icon
+      const randomIcon = financeIcons[Math.floor(Math.random() * financeIcons.length)];
+      
+      // Create and set the favicon
+      const favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      favicon.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${encodeURIComponent(randomIcon)}</text></svg>`;
+      document.head.appendChild(favicon);
+      
+      // Also set apple touch icon
+      const appleTouchIcon = document.createElement('link');
+      appleTouchIcon.rel = 'apple-touch-icon';
+      appleTouchIcon.sizes = '180x180';
+      appleTouchIcon.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${encodeURIComponent(randomIcon)}</text></svg>`;
+      document.head.appendChild(appleTouchIcon);
+      
+      // Optional: Change favicon periodically while user is on the page
+      let iconIndex = financeIcons.indexOf(randomIcon);
+      setInterval(() => {
+        iconIndex = (iconIndex + 1) % financeIcons.length;
+        const nextIcon = financeIcons[iconIndex];
+        favicon.href = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>${encodeURIComponent(nextIcon)}</text></svg>`;
+      }, 30000); // Changes every 30 seconds
+    </script>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Equipay - Your smart personal finance management solution. Track expenses, split bills, and manage your money efficiently." />
+    <meta name="keywords" content="finance, money management, expense tracker, bill splitting, budget planner" />
+    <meta name="author" content="Equipay Team" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://equipay.com/" />
+    <meta property="og:title" content="Equipay - Smart Finance Management" />
+    <meta property="og:description" content="Your smart personal finance management solution. Track expenses, split bills, and manage your money efficiently." />
+    <meta property="og:image" content="https://equipay.com/og-image.png" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://equipay.com/" />
+    <meta property="twitter:title" content="Equipay - Smart Finance Management" />
+    <meta property="twitter:description" content="Your smart personal finance management solution. Track expenses, split bills, and manage your money efficiently." />
+    <meta property="twitter:image" content="https://equipay.com/twitter-image.png" />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#6366f1" />
+    
+    <!-- Manifest for PWA -->
+    <link rel="manifest" href="/manifest.json">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Fallback for users with JavaScript disabled -->
+    <noscript>
+      <div style="text-align: center; padding: 50px; font-family: 'Inter', sans-serif;">
+        <h1>Equipay requires JavaScript</h1>
+        <p>Please enable JavaScript in your browser to use this application.</p>
+      </div>
+    </noscript>
+  </body>
+</html>
