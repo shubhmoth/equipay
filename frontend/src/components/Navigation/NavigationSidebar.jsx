@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard,
   Wallet,
@@ -20,9 +21,29 @@ import {
 } from 'lucide-react';
 
 const NavigationSidebar = ({ isOpen, toggleSidebar }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeItem, setActiveItem] = useState('dashboard');
   const [hoveredItem, setHoveredItem] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Update active item based on current route
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/dashboard') {
+      setActiveItem('dashboard');
+    } else if (path === '/expenses') {
+      setActiveItem('expenses');
+    } else if (path === '/split') {
+      setActiveItem('split');
+    } else if (path === '/reports') {
+      setActiveItem('reports');
+    } else if (path === '/settings') {
+      setActiveItem('settings');
+    } else if (path === '/help') {
+      setActiveItem('help');
+    }
+  }, [location.pathname]);
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -43,10 +64,24 @@ const NavigationSidebar = ({ isOpen, toggleSidebar }) => {
     { id: 3, title: 'Savings goal reached!', time: '3 hours ago', type: 'savings' }
   ];
 
-  const handleItemClick = (itemId) => {
-    setActiveItem(itemId);
-    // Add navigation logic here
-    // navigate(item.path);
+  const handleItemClick = (item) => {
+    setActiveItem(item.id);
+    
+    if (item.id === 'logout') {
+      // Handle logout
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userName');
+      navigate('/');
+    } else {
+      // Navigate to the respective page
+      navigate(item.path);
+    }
+
+    // Close sidebar on mobile after navigation
+    if (window.innerWidth < 768) {
+      toggleSidebar();
+    }
   };
 
   return (
@@ -69,7 +104,8 @@ const NavigationSidebar = ({ isOpen, toggleSidebar }) => {
               <Menu size={24} className="text-gray-700" />
             </motion.button>
             <motion.div 
-              className="flex items-center gap-3"
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => navigate('/dashboard')}
             >
               <motion.div 
                 className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-xl"
@@ -159,6 +195,17 @@ const NavigationSidebar = ({ isOpen, toggleSidebar }) => {
         </div>
       </motion.nav>
 
+      {/* Mobile Overlay */}
+      {isOpen && window.innerWidth < 768 && (
+        <motion.div
+          className="fixed inset-0 top-16 bg-black bg-opacity-50 z-30"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={toggleSidebar}
+        />
+      )}
+
       {/* Sidebar */}
       <motion.aside
         className="fixed top-16 left-0 bottom-0 w-60 bg-white border-r border-gray-200 z-40"
@@ -172,12 +219,12 @@ const NavigationSidebar = ({ isOpen, toggleSidebar }) => {
             {navItems.map((item, index) => (
               <motion.button
                 key={item.id}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 mb-1 rounded-lg transition-all ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 mb-1 rounded-lg transition-all relative ${
                   activeItem === item.id 
                     ? 'bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600' 
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
-                onClick={() => handleItemClick(item.id)}
+                onClick={() => handleItemClick(item)}
                 onMouseEnter={() => setHoveredItem(item.id)}
                 onMouseLeave={() => setHoveredItem(null)}
                 initial={{ opacity: 0, x: -20 }}
@@ -219,8 +266,8 @@ const NavigationSidebar = ({ isOpen, toggleSidebar }) => {
                   activeItem === item.id 
                     ? 'bg-gradient-to-r from-blue-50 to-purple-50 text-blue-600' 
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-                onClick={() => handleItemClick(item.id)}
+                } ${item.id === 'logout' ? 'hover:bg-red-50 hover:text-red-600' : ''}`}
+                onClick={() => handleItemClick(item)}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: (navItems.length + index) * 0.1 }}

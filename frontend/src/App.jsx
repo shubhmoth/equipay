@@ -7,6 +7,8 @@ import NavigationSidebar from './components/Navigation/NavigationSidebar';
 // Lazy load components
 const LandingPage = React.lazy(() => import('./components/LandingPage/LandingPage'));
 const Dashboard = React.lazy(() => import('./components/Dashboards/Dashboard'));
+const ExpensesPage = React.lazy(() => import('./components/Expenses/ExpensePage'));
+const SplitBillsPage = React.lazy(() => import('./components/SplitBills/SplitBillsPage'));
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -59,7 +61,7 @@ const LoadingScreen = () => (
 );
 
 // Dashboard Layout Component
-const DashboardLayout = () => {
+const DashboardLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   const toggleSidebar = () => {
@@ -96,7 +98,7 @@ const DashboardLayout = () => {
         transition={{ duration: 0.5 }}
       >
         <Suspense fallback={<LoadingScreen />}>
-          <Dashboard />
+          {children}
         </Suspense>
       </motion.main>
     </div>
@@ -129,7 +131,29 @@ function App() {
               path="/dashboard" 
               element={
                 <ProtectedRoute>
-                  <DashboardLayout />
+                  <DashboardLayout>
+                    <Dashboard />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/expenses" 
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <ExpensesPage />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/split" 
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <SplitBillsPage />
+                  </DashboardLayout>
                 </ProtectedRoute>
               } 
             />
